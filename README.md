@@ -14,6 +14,7 @@ A simple and visually appealing habit tracker to help you build good habits, tra
 ## Demo
 
 Open `index.html` in your browser to try it out!
+https://ayeshah666.github.io/Habit-Tracker/
 
 ## Technologies Used
 
