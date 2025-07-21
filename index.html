@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cute Habit Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes progress-grow {
+            from { width: 0; }
+            to { width: var(--progress); }
+        }
+        
+        .habit-checked {
+            animation: bounce 0.5s ease;
+        }
+        
+        .progress-bar {
+            animation: progress-grow 1s ease-out forwards;
+        }
+        
+        .habit-card:hover {
+            animation: pulse 0.5s ease;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f0f;
+            opacity: 0;
+        }
+
+        .scale-110 {
+            transform: scale(1.15);
+            transition: transform 0.15s;
+        }
+    </style>
+</head>
+<body class="bg-pink-50 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-pink-600 mb-2">🌸 Cute Habit Tracker 🌸</h1>
+            <p class="text-pink-400">Build good habits one day at a time!</p>
+            <div class="mt-4 relative">
+                <div class="w-full bg-pink-200 rounded-full h-4">
+                    <div id="overall-progress" class="progress-bar bg-pink-500 h-4 rounded-full" style="--progress: 0%"></div>
+                </div>
+                <p id="progress-text" class="text-sm text-pink-600 mt-1">0% of habits completed today</p>
+            </div>
+        </header>
+        
+        <!-- Add Habit Form -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8 border-2 border-pink-200">
+            <h2 class="text-xl font-semibold text-pink-700 mb-4">Add New Habit</h2>
+            <div class="flex gap-2">
+                <input type="text" id="habit-input" placeholder="Drink water, exercise, etc." class="flex-1 px-4 py-2 rounded-lg border-2 border-pink-300 focus:outline-none focus:border-pink-500">
+                <button id="add-habit" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                    <i class="fas fa-plus"></i> Add
+                </button>
+            </div>
+        </div>
+        
+        <!-- Habit Categories -->
+        <div class="flex gap-4 mb-6 overflow-x-auto pb-2">
+            <button class="category-btn px-4 py-2 rounded-full bg-pink-500 text-white" data-category="all">All Habits</button>
+            <button class="category-btn px-4 py-2 rounded-full bg-pink-200 text-pink-700" data-category="health">Health</button>
+            <button class="category-btn px-4 py-2 rounded-full bg-blue-200 text-blue-700" data-category="productivity">Productivity</button>
+            <button class="category-btn px-4 py-2 rounded-full bg-purple-200 text-purple-700" data-category="mindfulness">Mindfulness</button>
+            <button class="category-btn px-4 py-2 rounded-full bg-green-200 text-green-700" data-category="learning">Learning</button>
+        </div>
+        
+        <!-- Habits List -->
+        <div id="habits-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Sample habits will be added here by JavaScript -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-state" class="text-center py-12">
+            <i class="fas fa-heart text-5xl text-pink-300 mb-4"></i>
+            <h3 class="text-xl text-pink-600 font-medium">No habits yet!</h3>
+            <p class="text-pink-400">Add your first habit to get started on your journey.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sample data
+            let habits = [
+                { id: 1, name: 'Drink 8 glasses of water', category: 'health', checked: false, streak: 0 },
+                { id: 2, name: '30-minute workout', category: 'health', checked: false, streak: 0 },
+                { id: 3, name: 'Read 10 pages', category: 'learning', checked: false, streak: 0 },
+                { id: 4, name: 'Meditate for 5 minutes', category: 'mindfulness', checked: false, streak: 0 },
+                { id: 5, name: 'Plan next day', category: 'productivity', checked: false, streak: 0 }
+            ];
+            
+            let currentCategory = 'all';
+            
+            // DOM elements
+            const habitsContainer = document.getElementById('habits-container');
+            const emptyState = document.getElementById('empty-state');
+            const habitInput = document.getElementById('habit-input');
+            const addHabitBtn = document.getElementById('add-habit');
+            const categoryBtns = document.querySelectorAll('.category-btn');
+            const overallProgress = document.getElementById('overall-progress');
+            const progressText = document.getElementById('progress-text');
+            
+            // Render habits
+            function renderHabits() {
+                habitsContainer.innerHTML = '';
+                
+                const filteredHabits = currentCategory === 'all' 
+                    ? habits 
+                    : habits.filter(habit => habit.category === currentCategory);
+                
+                if (filteredHabits.length === 0) {
+                    emptyState.style.display = 'block';
+                    return;
+                }
+                
+                emptyState.style.display = 'none';
+                
+                filteredHabits.forEach(habit => {
+                    const habitCard = document.createElement('div');
+                    habitCard.className = `habit-card bg-white rounded-xl shadow-md p-6 border-2 ${getCategoryBorderColor(habit.category)} transition-all duration-300 relative overflow-hidden`;
+                    habitCard.setAttribute('data-id', habit.id); // Add data-id for confetti/animation targeting
+
+                    habitCard.innerHTML = `
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="font-medium text-lg ${getCategoryTextColor(habit.category)}">${habit.name}</h3>
+                            <span class="text-xs px-2 py-1 rounded-full ${getCategoryBgColor(habit.category)} ${getCategoryTextColor(habit.category)}">${habit.category}</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-4">
+                            <div>
+                                <span class="text-sm text-gray-500">Streak:</span>
+                                <span class="ml-1 font-bold ${getStreakColor(habit.streak)}">${habit.streak} 🔥</span>
+                            </div>
+                            <button 
+                                class="check-btn w-10 h-10 rounded-full ${habit.checked ? 'bg-green-400 text-white' : 'bg-gray-200 text-gray-600'} flex items-center justify-center transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-pink-400"
+                                aria-label="${habit.checked ? 'Habit completed' : 'Mark habit as done'}"
+                                ${habit.checked ? 'disabled' : ''}
+                                style="transition: background 0.2s, color 0.2s;"
+                            >
+                                <i class="fas fa-${habit.checked ? 'check' : 'plus'} transition-all duration-200"></i>
+                            </button>
+                        </div>
+                        <div class="mt-3 relative">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="progress-bar ${getCategoryBgColor(habit.category)} h-2 rounded-full" style="--progress: ${habit.streak > 7 ? '100%' : (habit.streak * 12.5) + '%'}"></div>
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">${getStreakMessage(habit.streak)}</div>
+                        </div>
+                    `;
+
+                    // Only allow checking via the + button, and only if not already checked
+                    const checkBtn = habitCard.querySelector('.check-btn');
+                    checkBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (!habit.checked) {
+                            toggleHabit(habit.id);
+                            // Add a quick scale animation for feedback
+                            checkBtn.classList.add('scale-110');
+                            setTimeout(() => checkBtn.classList.remove('scale-110'), 150);
+                        }
+                    });
+
+                    habitsContainer.appendChild(habitCard);
+                });
+                
+                updateOverallProgress();
+            }
+            
+            // Toggle habit completion
+            function toggleHabit(id) {
+                const habit = habits.find(h => h.id === id);
+                if (!habit) return;
+                
+                if (!habit.checked) {
+                    habit.checked = true;
+                    habit.streak += 1;
+                    createConfetti(habitsContainer.querySelector(`[data-id="${id}"]`));
+                } else {
+                    habit.checked = false;
+                    habit.streak = Math.max(0, habit.streak - 1);
+                }
+                
+                renderHabits();
+                
+                // Add bounce animation to the checked habit
+                const habitCard = habitsContainer.querySelector(`[data-id="${id}"]`);
+                if (habitCard) {
+                    habitCard.classList.add('habit-checked');
+                    setTimeout(() => {
+                        habitCard.classList.remove('habit-checked');
+                    }, 500);
+                }
+            }
+            
+            // Add new habit
+            addHabitBtn.addEventListener('click', function() {
+                const name = habitInput.value.trim();
+                if (!name) return;
+                
+                const newHabit = {
+                    id: Date.now(),
+                    name: name,
+                    category: 'health', // Default category
+                    checked: false,
+                    streak: 0
+                };
+                
+                habits.push(newHabit);
+                habitInput.value = '';
+                renderHabits();
+            });
+            
+            // Filter by category
+            categoryBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentCategory = this.dataset.category;
+                    categoryBtns.forEach(b => {
+                        b.classList.remove('bg-pink-500', 'text-white');
+                        b.classList.add('bg-pink-200', 'text-pink-700');
+                    });
+                    
+                    this.classList.remove('bg-pink-200', 'text-pink-700');
+                    this.classList.add('bg-pink-500', 'text-white');
+                    
+                    renderHabits();
+                });
+            });
+            
+            // Update overall progress
+            function updateOverallProgress() {
+                const totalHabits = habits.length;
+                const completedHabits = habits.filter(h => h.checked).length;
+                const progress = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
+                
+                overallProgress.style.setProperty('--progress', `${progress}%`);
+                progressText.textContent = `${progress}% of habits completed today`;
+                
+                if (progress === 100) {
+                    celebrateCompletion();
+                }
+            }
+            
+            // Celebration effect
+            function celebrateCompletion() {
+                for (let i = 0; i < 50; i++) {
+                    createConfetti(document.body);
+                }
+            }
+            
+            // Create confetti effect
+            function createConfetti(parent) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                
+                // Random position
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * window.innerHeight;
+                
+                // Random color
+                const colors = ['#ff9ff3', '#feca57', '#ff6b6b', '#48dbfb', '#1dd1a1'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                confetti.style.left = `${x}px`;
+                confetti.style.top = `${y}px`;
+                confetti.style.backgroundColor = color;
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                
+                parent.appendChild(confetti);
+                
+                // Animate
+                setTimeout(() => {
+                    confetti.style.transition = 'all 1s ease-out';
+                    confetti.style.opacity = '1';
+                    confetti.style.transform = `translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 + 100}px) rotate(${Math.random() * 360}deg)`;
+                    
+                    setTimeout(() => {
+                        confetti.style.opacity = '0';
+                        setTimeout(() => confetti.remove(), 1000);
+                    }, 500);
+                }, 10);
+            }
+            
+            // Helper functions
+            function getCategoryBorderColor(category) {
+                const colors = {
+                    health: 'border-pink-300',
+                    productivity: 'border-blue-300',
+                    mindfulness: 'border-purple-300',
+                    learning: 'border-green-300'
+                };
+                return colors[category] || 'border-gray-300';
+            }
+            
+            function getCategoryTextColor(category) {
+                const colors = {
+                    health: 'text-pink-700',
+                    productivity: 'text-blue-700',
+                    mindfulness: 'text-purple-700',
+                    learning: 'text-green-700'
+                };
+                return colors[category] || 'text-gray-700';
+            }
+            
+            function getCategoryBgColor(category) {
+                const colors = {
+                    health: 'bg-pink-500',
+                    productivity: 'bg-blue-500',
+                    mindfulness: 'bg-purple-500',
+                    learning: 'bg-green-500'
+                };
+                return colors[category] || 'bg-gray-500';
+            }
+            
+            function getStreakColor(streak) {
+                if (streak >= 7) return 'text-green-600';
+                if (streak >= 3) return 'text-yellow-600';
+                return 'text-red-600';
+            }
+            
+            function getStreakMessage(streak) {
+                if (streak === 0) return 'Start your streak today!';
+                if (streak === 1) return 'Great start!';
+                if (streak < 3) return 'Keep going!';
+                if (streak < 7) return 'Nice streak!';
+                if (streak < 14) return 'Amazing!';
+                return 'You rock!';
+            }
+            
+            // Initial render
+            renderHabits();
+        });
+    </script>
+</body>
+</html>
